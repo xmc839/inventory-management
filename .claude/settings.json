@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__github__create_pull_request",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "A new GitHub pull request was just created (tool response: $ARGUMENTS). Run /code-review on the current branch diff against main to review the code changes. Focus on correctness bugs, security issues, and obvious quality problems.",
+            "statusMessage": "Running automated code review...",
+            "asyncRewake": true,
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

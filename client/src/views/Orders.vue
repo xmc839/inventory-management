@@ -75,6 +75,57 @@
         </div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Submitted Restocking Orders</h3>
+      </div>
+      <div v-if="loadingRestocking" class="loading">Loading...</div>
+      <div v-else-if="restockingError" class="error">{{ restockingError }}</div>
+      <div v-else-if="restockingOrders.length === 0" class="empty-restocking">
+        No restocking orders submitted yet.
+      </div>
+      <div v-else class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Order Number</th>
+              <th>Items</th>
+              <th>Status</th>
+              <th>Order Date</th>
+              <th>Expected Delivery</th>
+              <th>Total Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="order in restockingOrders" :key="order.id">
+              <td><strong>{{ order.order_number }}</strong></td>
+              <td>
+                <details class="items-details">
+                  <summary class="items-summary">
+                    {{ order.items.length }} item{{ order.items.length !== 1 ? 's' : '' }}
+                  </summary>
+                  <div class="items-dropdown">
+                    <div v-for="item in order.items" :key="item.sku" class="item-entry">
+                      <span class="item-name">{{ item.name }}</span>
+                      <span class="item-meta">Qty: {{ item.quantity }}</span>
+                    </div>
+                  </div>
+                </details>
+              </td>
+              <td>
+                <span :class="['badge', getRestockingStatusClass(order.status)]">
+                  {{ order.status }}
+                </span>
+              </td>
+              <td>{{ formatDate(order.order_date) }}</td>
+              <td>{{ formatDate(order.expected_delivery) }}</td>
+              <td><strong>{{ currencySymbol }}{{ order.total_value.toLocaleString() }}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -153,7 +204,34 @@ export default {
       })
     }
 
-    onMounted(loadOrders)
+    const restockingOrders = ref([])
+    const loadingRestocking = ref(false)
+    const restockingError = ref(null)
+
+    const loadRestockingOrders = async () => {
+      loadingRestocking.value = true
+      restockingError.value = null
+      try {
+        restockingOrders.value = await api.getRestockingOrders()
+      } catch (err) {
+        restockingError.value = 'Failed to load restocking orders'
+        console.error(err)
+      } finally {
+        loadingRestocking.value = false
+      }
+    }
+
+    const getRestockingStatusClass = (status) => {
+      if (status === 'Processing') return 'warning'
+      if (status === 'Delivered') return 'success'
+      if (status === 'Shipped') return 'info'
+      return 'warning'
+    }
+
+    onMounted(() => {
+      loadOrders()
+      loadRestockingOrders()
+    })
 
     return {
       t,
@@ -165,7 +243,11 @@ export default {
       formatDate,
       currencySymbol,
       translateProductName,
-      translateCustomerName
+      translateCustomerName,
+      restockingOrders,
+      loadingRestocking,
+      restockingError,
+      getRestockingStatusClass
     }
   }
 }
@@ -275,5 +357,12 @@ export default {
 .item-meta {
   font-size: 0.813rem;
   color: #64748b;
+}
+
+.empty-restocking {
+  text-align: center;
+  padding: 3rem;
+  color: #64748b;
+  font-size: 0.938rem;
 }
 </style>
